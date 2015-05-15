@@ -8,10 +8,7 @@
 
 #include "headtracker.h"
 
-
 typedef std::chrono::milliseconds ms;
-
-
 
 float euclideanDist(Point& p, Point& q) {
     Point diff = p - q;
@@ -19,70 +16,69 @@ float euclideanDist(Point& p, Point& q) {
 }
 
 
+void FaceTracker::stopTrack(){
+    keepTracking = false;
+    printf("asked to stop tracking\n");
+}
+
+
 void FaceTracker::track() {
+    keepTracking = true;
     if(!webcam.isOpened()) { // Make sure camera works properly
         return;
     }
-
     if(gpu::getCudaEnabledDeviceCount() > 0) {
         printf("Found CUDA enabled devices. Using GPU for face tracking!\n");
-        gpuCap();
+        gpuTrack();
     }
     else {
         printf("Could not find any CUDA enabled devices. Resorting to CPU face tracking.\n");
-        cpuCap();
+        cpuTrack();
     }
 }
 
 /* 
  * Face tracking using the GPU.
- * Not implemented properly yet,
- * Just some example code from documentation.
  */
-void FaceTracker::gpuCap(){
-//    gpu::CascadeClassifier_GPU cascade_gpu("data/lbpcascades/lbpcascade_frontalface.xml");
-//    gpu::CascadeClassifier_GPU eye_cascade("data/haarcascades/haarcascade_eye.xml");
-//    gpu::CascadeClassifier_GPU face_cascade("data/haarcascades/haarcascade_frontalface_alt.xml");
-    gpu::CascadeClassifier_GPU eye_cascade("data/haarcascades/haarcascade_mcs_eyepair_big.xml");
+void FaceTracker::gpuTrack(){
+    gpu::CascadeClassifier_GPU face_cascade("data/lbpcascades/lbpcascade_frontalface.xml");
+    Mat frame_gray, frame;
 
-    Mat image_cpu, frame_gray;
-
-    while (true) {
+    while (keepTracking) {
         auto start = std::chrono::system_clock::now();
-        webcam >> image_cpu;
-        cvtColor(image_cpu, frame_gray, CV_BGR2GRAY);  // convert to gray image as face detection do NOT use color info
+        webcam >> frame;
+        cvtColor(frame, frame_gray, CV_BGR2GRAY);  // convert to gray image as face detection does NOT use color info
         equalizeHist(frame_gray,frame_gray);
         gpu::GpuMat gray_gpu(frame_gray);  // copy the gray image to GPU memory
-        gpu::GpuMat eyebuf;
-        float scaleFactor = 1.05;
-        int minNeighbours = 1;
-        int eye_count = eye_cascade.detectMultiScale(gray_gpu, eyebuf, scaleFactor, minNeighbours);
+        gpu::GpuMat facebuf;
+        float scaleFactor = 1.2;
+        int minNeighbours = 6;
+        int face_count = face_cascade.detectMultiScale(gray_gpu, facebuf, scaleFactor, minNeighbours);
 
         Mat obj_host;
-        // download only detected number of rectangles
-        eyebuf.colRange(0, eye_count).download(obj_host);
+        // download detected number of rectangles from the GPU
+        facebuf.colRange(0, face_count).download(obj_host);
+        Rect* faces_gpu = obj_host.ptr<Rect>();
 
-        Rect* eyes_gpu = obj_host.ptr<Rect>();
-        vector<Rect> eyes;
-        for(int i = 0; i < eye_count; ++i) {
-            eyes.push_back(eyes_gpu[i]);
-            cv::rectangle(image_cpu, eyes[i], Scalar(255));
+        /* Loop through faces.
+         * Currently we just use the last face.
+         * Ideally, we should do some analysis to decide what position
+         * to use when multiple faces are detected. (Biggest one?)
+         */
+        for(int i = 0; i < face_count; ++i) {
+            Rect face = faces_gpu[i];
+            Point centerpoint(face.x + face.width/2, face.y + face.height/2);
+            detectedPosition = Point2i(centerpoint.x, centerpoint.y);
         }
-
-        // Draw fps counter
+        frame.copyTo(output);
         auto end = std::chrono::system_clock::now();
         ms duration = std::chrono::duration_cast<ms>(end - start);
-        string duration_string = std::to_string(1000/ (duration.count()+1)) + "fps";
-        putText(image_cpu, duration_string, Point(0,12), CV_FONT_HERSHEY_PLAIN, 1.1 , Scalar(255,255,255));
-
-        imshow("Faces", image_cpu);
-        if(waitKey(1) >= 0) {
-            break;
-        }
+        fps = (duration.count() == 0)?0:(1000/duration.count());
     }
+    printf("finished tracking\n");
 }
 
-void FaceTracker::cpuCap(){
+void FaceTracker::cpuTrack(){
 
     CascadeClassifier eye_cascade;
     if(!eye_cascade.load("data/haarcascades/haarcascade_eye.xml")){
@@ -124,7 +120,8 @@ void FaceTracker::cpuCap(){
             /* At this point we save the detected camera position.
              * OpenGL should use this value to position the camera in the scene.
              */
-            camera = Point3i(midPoint.x, midPoint.y, distance);
+            detectedPosition = Point2i(midPoint.x, midPoint.y);
+            detectedDistance = distance;
 
             // Draw a green crossed circle representing 3d camera position.
             circle(frame, midPoint, distance/2, Scalar(0,255,0));
@@ -137,17 +134,9 @@ void FaceTracker::cpuCap(){
         ms duration = std::chrono::duration_cast<ms>(end - start);
         string duration_string = std::to_string(1000/ (duration.count()+1)) + "fps";
         putText(frame, duration_string, Point(0,12), CV_FONT_HERSHEY_PLAIN, 1.1 , Scalar(255,255,255));
-
         imshow("face", frame);
         if(waitKey(1) >= 0) {
             break;
         }
     }
-}
-
-
-int main(int argc, char** argv) {
-    FaceTracker ft = FaceTracker();
-    ft.track();
-    return 0;
 }

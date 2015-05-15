@@ -19,22 +19,27 @@
 using namespace cv;
 class FaceTracker {
 public:
-    FaceTracker() {
+    Point2i detectedPosition; // Position of face (between eyes)
+    int detectedDistance;
+    int fps;
+
+    FaceTracker():detectedPosition(Point2i(0,0)), detectedDistance(0) {
         webcam = VideoCapture(0);
         // To increase camera FPS and processing speed, capture a small image.
         webcam.set(CV_CAP_PROP_FRAME_WIDTH, 320);
         webcam.set(CV_CAP_PROP_FRAME_HEIGHT, 240);
         webcam.set(CV_CAP_PROP_CONVERT_RGB, false); // We will convert to grayscale anyway.
-
+        output = Mat::zeros(240, 320, CV_8UC3);
     }
+
     void track();
+    void stopTrack();
+    Mat output;
 private:
-    void gpuCap();
-    void cpuCap();
+    void gpuTrack();
+    void cpuTrack();
     VideoCapture webcam;
-    Point3i camera; // Position of face (between eyes)
-
-
+    bool keepTracking;
     /* GPU */
 
 };
