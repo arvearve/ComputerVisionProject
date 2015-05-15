@@ -11,6 +11,8 @@
 #include <thread>
 #define FLIP_HORIZONTAL 1
 
+Mat drawParallax(const Point2i headPosition);
+Mat backgroundImage = imread("data/landscape.jpg");
 
 /* Draws tracking debug info on an image.
  *
@@ -32,14 +34,17 @@ Mat drawStats(const FaceTracker &ft, Mat &frame){
 
 int main(int argc, char** argv) {
     FaceTracker ft = FaceTracker();
-
+    namedWindow("debug");
+    namedWindow("scene");
     /* Start a thread and continuously run face tracking */
     std::thread trackerThread(&FaceTracker::track, &ft);
 
     /* Read tracked values, update display */
     while(true){
         Mat cameraView = drawStats(ft, ft.output);
-        imshow("Faces", cameraView);
+        imshow("debug", cameraView);
+        imshow("scene", drawParallax(ft.detectedPosition));
+        moveWindow("scene", 750, 0);
         if(waitKey(1) >= 0) {
             ft.stopTrack();
             break;
@@ -51,3 +56,18 @@ int main(int argc, char** argv) {
 }
 
 
+/* Parallax effect based on head position
+ * Returns a region of backgroundImage.
+ * The region size is 640*480
+ * The regions position is inversely related to the user's head position.
+ */
+Mat drawParallax(Point2i headPosition){
+    float scaleFactor = 0.5;
+    headPosition.x = backgroundImage.cols/2 + headPosition.x*scaleFactor;
+    headPosition.y = backgroundImage.rows/2 + headPosition.y*scaleFactor;
+    Point2i offsetX = Point2i(320, 0), offsetY = Point2i(0, 240);
+    Point2i topLeft     = headPosition - offsetX - offsetY,
+            bottomRight = headPosition + offsetX + offsetY;
+    Rect ROI(topLeft, bottomRight);
+    return backgroundImage(ROI);
+}
