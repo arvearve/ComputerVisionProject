@@ -1,6 +1,13 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 PROJECT(Headtrack CXX)
 SET(CMAKE_BUILD_TYPE Release)
+ADD_DEFINITIONS(
+        -std=c++11 # Or -std=c++0x
+            # Other flags
+            )
+add_custom_command(TARGET Headtrack POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                   ${CMAKE_SOURCE_DIR}/data $<TARGET_FILE_DIR:Headtrack>)
 # you might have to set this
 #SET(OpenCV_DIR /path/to/your/opencv/installation)
 FIND_PACKAGE(OpenCV REQUIRED) 

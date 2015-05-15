@@ -20,7 +20,12 @@ float euclideanDist(Point& p, Point& q) {
 
 
 void FaceTracker::track() {
+    if(!webcam.isOpened()) { // Make sure camera works properly
+        return;
+    }
+
     if(gpu::getCudaEnabledDeviceCount() > 0) {
+        printf("Found CUDA enabled devices. Using GPU for face tracking!\n");
         gpuCap();
     }
     else {
@@ -35,27 +40,40 @@ void FaceTracker::track() {
  * Just some example code from documentation.
  */
 void FaceTracker::gpuCap(){
-    gpu::CascadeClassifier_GPU cascade_gpu("data/haarcascades/haarcascade_eye.xml");
-    Mat image_cpu;
+//    gpu::CascadeClassifier_GPU cascade_gpu("data/lbpcascades/lbpcascade_frontalface.xml");
+//    gpu::CascadeClassifier_GPU eye_cascade("data/haarcascades/haarcascade_eye.xml");
+//    gpu::CascadeClassifier_GPU face_cascade("data/haarcascades/haarcascade_frontalface_alt.xml");
+    gpu::CascadeClassifier_GPU eye_cascade("data/haarcascades/haarcascade_mcs_eyepair_big.xml");
 
-    if(!webcam.isOpened())  // Make sure camera works properly
-        return;
+    Mat image_cpu, frame_gray;
 
     while (true) {
+        auto start = std::chrono::system_clock::now();
         webcam >> image_cpu;
-        gpu::GpuMat image_gpu(image_cpu);
-        gpu::GpuMat objbuf;
-
-        int detections_number = cascade_gpu.detectMultiScale( image_gpu, objbuf);
+        cvtColor(image_cpu, frame_gray, CV_BGR2GRAY);  // convert to gray image as face detection do NOT use color info
+        equalizeHist(frame_gray,frame_gray);
+        gpu::GpuMat gray_gpu(frame_gray);  // copy the gray image to GPU memory
+        gpu::GpuMat eyebuf;
+        float scaleFactor = 1.05;
+        int minNeighbours = 1;
+        int eye_count = eye_cascade.detectMultiScale(gray_gpu, eyebuf, scaleFactor, minNeighbours);
 
         Mat obj_host;
         // download only detected number of rectangles
-        objbuf.colRange(0, detections_number).download(obj_host);
+        eyebuf.colRange(0, eye_count).download(obj_host);
 
-        Rect* faces = obj_host.ptr<Rect>();
-        for(int i = 0; i < detections_number; ++i) {
-            cv::rectangle(image_cpu, faces[i], Scalar(255));
+        Rect* eyes_gpu = obj_host.ptr<Rect>();
+        vector<Rect> eyes;
+        for(int i = 0; i < eye_count; ++i) {
+            eyes.push_back(eyes_gpu[i]);
+            cv::rectangle(image_cpu, eyes[i], Scalar(255));
         }
+
+        // Draw fps counter
+        auto end = std::chrono::system_clock::now();
+        ms duration = std::chrono::duration_cast<ms>(end - start);
+        string duration_string = std::to_string(1000/ (duration.count()+1)) + "fps";
+        putText(image_cpu, duration_string, Point(0,12), CV_FONT_HERSHEY_PLAIN, 1.1 , Scalar(255,255,255));
 
         imshow("Faces", image_cpu);
         if(waitKey(1) >= 0) {
@@ -65,7 +83,6 @@ void FaceTracker::gpuCap(){
 }
 
 void FaceTracker::cpuCap(){
-    if(!webcam.isOpened()) { return; } // check if we succeeded
 
     CascadeClassifier eye_cascade;
     if(!eye_cascade.load("data/haarcascades/haarcascade_eye.xml")){
