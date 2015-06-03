@@ -15,14 +15,14 @@ float euclideanDist(Point& p, Point& q) {
     return (int)sqrt(diff.x*diff.x + diff.y*diff.y);
 }
 
-
-void FaceTracker::stopTrack(){
+HeadTracker::~HeadTracker(){
     keepTracking = false;
+    processThread.join();
     printf("asked to stop tracking\n");
 }
 
 
-void FaceTracker::track() {
+void HeadTracker::track() {
     keepTracking = true;
     if(!webcam.isOpened()) { // Make sure camera works properly
         return;
@@ -40,7 +40,7 @@ void FaceTracker::track() {
 /* 
  * Face tracking using the GPU.
  */
-void FaceTracker::gpuTrack(){
+void HeadTracker::gpuTrack(){
     gpu::CascadeClassifier_GPU face_cascade("data/lbpcascades/lbpcascade_frontalface.xml");
     Mat frame_gray, frame;
 
@@ -78,7 +78,7 @@ void FaceTracker::gpuTrack(){
     printf("finished tracking\n");
 }
 
-void FaceTracker::cpuTrack(){
+void HeadTracker::cpuTrack(){
     CascadeClassifier eye_cascade;
     if(!eye_cascade.load("data/lbpcascades/lbpcascade_frontalface.xml")){
         printf("Error: Could not load cascades for face detection.");

@@ -15,27 +15,30 @@
 #include <opencv2/nonfree/nonfree.hpp>
 #include <opencv2/gpu/gpu.hpp>
 #include <opencv2/gpu/gpumat.hpp>
+#include <thread>
 
 using namespace cv;
-class FaceTracker {
+class HeadTracker {
 public:
+
     Point2i detectedPosition; // Position of face (between eyes)
     int detectedDistance;
     int fps;
-
-    FaceTracker():detectedPosition(Point2i(0,0)), detectedDistance(0) {
+    HeadTracker():detectedPosition(Point2i(0,0)), detectedDistance(0) {
         webcam = VideoCapture(0);
         // To increase camera FPS and processing speed, capture a small image.
         webcam.set(CV_CAP_PROP_FRAME_WIDTH, 320);
         webcam.set(CV_CAP_PROP_FRAME_HEIGHT, 240);
         webcam.set(CV_CAP_PROP_CONVERT_RGB, false); // We will convert to grayscale anyway.
         output = Mat::zeros(240, 320, CV_8UC3);
-    }
-
+        processThread = std::thread(&HeadTracker::track, this);
+    };
+    ~HeadTracker();
     void track();
     void stopTrack();
     Mat output;
 private:
+    std::thread processThread;
     void gpuTrack();
     void cpuTrack();
     VideoCapture webcam;
