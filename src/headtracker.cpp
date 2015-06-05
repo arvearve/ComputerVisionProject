@@ -78,9 +78,12 @@ void HeadTracker::gpuTrack(){
     printf("finished tracking\n");
 }
 
+/* 
+ * Face tracking using the CPU.
+ */
 void HeadTracker::cpuTrack(){
-    CascadeClassifier eye_cascade;
-    if(!eye_cascade.load("data/lbpcascades/lbpcascade_frontalface.xml")){
+    CascadeClassifier face_cascade;
+    if(!face_cascade.load("data/haarcascades/haarcascade_frontalface_alt2.xml")){
         printf("Error: Could not load cascades for face detection.");
     }
     Mat frame;
@@ -91,8 +94,8 @@ void HeadTracker::cpuTrack(){
         vector<Rect> faces;
         vector<Point> centerpoints;
         float scaleFactor = 1.1;
-        int minNeighbours = 6;
-        eye_cascade.detectMultiScale(frame, faces, scaleFactor, minNeighbours);
+        int minNeighbours = 2;
+        face_cascade.detectMultiScale(frame, faces, scaleFactor, minNeighbours);
 
         /*
          * Grab the last face (because reasons)
