@@ -20,7 +20,7 @@
 using namespace cv;
 class HeadTracker {
 public:
-
+    float zoom;
     Point2i detectedPosition; // Position of face (between eyes)
     int detectedDistance;
     int fps;

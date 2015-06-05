@@ -86,16 +86,17 @@ void HeadTracker::cpuTrack(){
     if(!face_cascade.load("data/haarcascades/haarcascade_frontalface_alt2.xml")){
         printf("Error: Could not load cascades for face detection.");
     }
-    Mat frame;
+    Mat frame, gray;
 
     while(keepTracking) {
         auto start = std::chrono::system_clock::now();
         webcam >> frame;
+        cvtColor(frame, gray, CV_BGR2GRAY);  // convert to gray image as face detection does NOT use color info
         vector<Rect> faces;
         vector<Point> centerpoints;
         float scaleFactor = 1.1;
         int minNeighbours = 2;
-        face_cascade.detectMultiScale(frame, faces, scaleFactor, minNeighbours);
+        face_cascade.detectMultiScale(gray, faces, scaleFactor, minNeighbours);
 
         /*
          * Grab the last face (because reasons)
@@ -103,10 +104,13 @@ void HeadTracker::cpuTrack(){
         if (faces.size() > 0) {
             Rect face = faces[0];
             Point centerpoint(face.x + face.width/2, face.y + face.height/2);
+            float w = face.width;
+            float h = face.height;
+            zoom = w + h;
             detectedPosition = Point2i(centerpoint.x, centerpoint.y);
         }
 
-        frame.copyTo(output);
+        gray.copyTo(output);
 
         // Draw fps counter
         auto end = std::chrono::system_clock::now();
