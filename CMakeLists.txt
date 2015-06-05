@@ -10,7 +10,13 @@ TARGET_LINK_LIBRARIES(headtracker ${OpenCV_LIBS})
 add_custom_command(TARGET headtracker POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_directory
                    ${CMAKE_SOURCE_DIR}/data $<TARGET_FILE_DIR:headtracker>/data)
-ADD_DEFINITIONS(
-        -std=c++11 # Or -std=c++0x
-            # Other flags
-            )
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+ADD_EXECUTABLE(renderer src/renderer.cpp)
+FIND_PACKAGE(OpenGL REQUIRED)
+TARGET_LINK_LIBRARIES(renderer ${OPENGL_LIBRARIES})
+ADD_SUBDIRECTORy(lib/glfw)
+INCLUDE_DIRECTORIES(lib/glfw/include)
+TARGET_LINK_LIBRARIES(renderer glfw ${GLFW_LIBRARIES})
+add_custom_command(TARGET renderer POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                   ${CMAKE_SOURCE_DIR}/data $<TARGET_FILE_DIR:renderer>/data)

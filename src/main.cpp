@@ -6,7 +6,6 @@
 //  Copyright (c) 2015 Arve Nygård. All rights reserved.
 //
 
-#include "main.h"
 #include "headtracker.h"
 #include <thread>
 #define FLIP_HORIZONTAL 1
