@@ -68,6 +68,13 @@ void HeadTracker::gpuTrack(){
         for(int i = 0; i < face_count; ++i) {
             Rect face = faces_gpu[i];
             Point centerpoint(face.x + face.width/2, face.y + face.height/2);
+
+            //THIS IS THE ZOOM STUFF
+
+            float w = face.width;
+            float h = face.height;
+            zoom = w + h;
+
             detectedPosition = Point2i(centerpoint.x, centerpoint.y);
         }
         frame.copyTo(output);
