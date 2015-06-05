@@ -29,7 +29,7 @@ void HeadTracker::track() {
     }
     if(gpu::getCudaEnabledDeviceCount() > 0) {
         printf("Found CUDA enabled devices. Using GPU for face tracking!\n");
-        gpuTrack();
+        cpuTrack();
     }
     else {
         printf("Could not find any CUDA enabled devices. Resorting to CPU face tracking.\n");
@@ -69,6 +69,9 @@ void HeadTracker::gpuTrack(){
             Rect face = faces_gpu[i];
             Point centerpoint(face.x + face.width/2, face.y + face.height/2);
             detectedPosition = Point2i(centerpoint.x, centerpoint.y);
+            int xhalf = 320.0/2.0;
+            int yhalf = 240.0/2.0;
+            normalizedPosition = Point2f((centerpoint.x-xhalf)/xhalf,  (centerpoint.y-yhalf)/yhalf); // position relative to window center
         }
         frame.copyTo(output);
         auto end = std::chrono::system_clock::now();
@@ -104,6 +107,9 @@ void HeadTracker::cpuTrack(){
             Rect face = faces[0];
             Point centerpoint(face.x + face.width/2, face.y + face.height/2);
             detectedPosition = Point2i(centerpoint.x, centerpoint.y);
+            float xhalf = 320.0/2.0;
+            float yhalf = 240.0/2.0;
+            normalizedPosition = Point2f((centerpoint.x-xhalf)/xhalf,  (centerpoint.y-yhalf)/yhalf); // position relative to window center
         }
 
         frame.copyTo(output);

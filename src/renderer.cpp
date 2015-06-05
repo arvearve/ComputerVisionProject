@@ -2,8 +2,15 @@
 
 
 Renderer r;
+HeadTracker ft; // Starts tracking automatically.
 int main(){
+
+    namedWindow("debug");
+
     r.init();
+
+    /* Read tracked values, update display */
+
     r.render();
     return 0;
 }
@@ -40,6 +47,9 @@ void Renderer::init(){
 
 void Renderer::render() {
     while (!glfwWindowShouldClose(window)){
+//        printf("%f, %f\n", ft.normalizedPosition.x, ft.normalizedPosition.y);
+        g_resources.mouse_pos_x = -ft.normalizedPosition.x;
+        g_resources.mouse_pos_y = ft.normalizedPosition.y;
         draw();
     }
     glfwDestroyWindow(window);
@@ -48,7 +58,6 @@ void Renderer::render() {
 }
 
 void Renderer::draw(){
-
     glClearColor(0.3f, 0.3f, 0.3f, 0.3f);
     glClear(GL_COLOR_BUFFER_BIT);
     glUseProgram(g_resources.program);

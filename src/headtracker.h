@@ -22,6 +22,7 @@ class HeadTracker {
 public:
 
     Point2i detectedPosition; // Position of face (between eyes)
+    Point2f normalizedPosition;
     int detectedDistance;
     int fps;
     HeadTracker():detectedPosition(Point2i(0,0)), detectedDistance(0) {

@@ -19,11 +19,19 @@ GLint faces[6][4] = {  /* Vertex indices for the 6 faces of a cube. */
     {4, 5, 1, 0}, {5, 6, 2, 1}, {7, 4, 0, 3} };
 GLfloat v[8][3];  /* Will be filled in with X,Y,Z vertexes. */
 
-void
-drawBox(void)
-{
-    int i;
 
+float near = 1;
+float far = 6.0;
+float fov = 0.7;
+float aspect_ratio = 4.0/3.0;
+float headX = -0.2;
+float headY = -0.2;
+
+
+
+void
+drawBox(void){
+    int i;
     for (i = 0; i < 6; i++) {
         glBegin(GL_QUADS);
         glNormal3fv(&n[i][0]);
@@ -59,26 +67,30 @@ init(void)
     /* Enable a single OpenGL light. */
     glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
     glLightfv(GL_LIGHT0, GL_POSITION, light_position);
-    glEnable(GL_LIGHT0);
-    glEnable(GL_LIGHTING);
+//    glEnable(GL_LIGHT0);
+//    glEnable(GL_LIGHTING);
 
     /* Use depth buffering for hidden surface elimination. */
     glEnable(GL_DEPTH_TEST);
 
     /* Setup the view of the cube. */
     glMatrixMode(GL_PROJECTION);
-    gluPerspective( /* field of view in degree */ 40.0,
-                   /* aspect ratio */ 1.0,
-                   /* Z near */ 1.0, /* Z far */ 10.0);
+    glFrustum(
+              near * (-fov * aspect_ratio - headX),
+              near * ( fov * aspect_ratio - headX),
+              near * (-fov + headY),
+              near * ( fov + headY),
+              near, far
+              );
     glMatrixMode(GL_MODELVIEW);
-    gluLookAt(0.0, 0.0, 5.0,  /* eye is at (0,0,5) */
+    gluLookAt(headX, headY, 5.0,  /* eye is at (0,0,5) */
               0.0, 0.0, 0.0,      /* center is at (0,0,0) */
-              0.0, 1.0, 0.);      /* up is in positive Y direction */
+              0.0, 1.0, 0.0);      /* up is in positive Y direction */
 
     /* Adjust cube position to be asthetic angle. */
-    glTranslatef(0.0, 0.0, -1.0);
-    glRotatef(60, 1.0, 0.0, 0.0);
-    glRotatef(-20, 0.0, 0.0, 1.0);
+//    glTranslatef(0.0, 0.0, -1.0);
+//    glRotatef(60, 1.0, 0.0, 0.0);
+//    glRotatef(-20, 0.0, 0.0, 1.0);
 }
 
 

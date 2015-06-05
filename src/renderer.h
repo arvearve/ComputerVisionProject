@@ -19,7 +19,7 @@
 #include <fstream>
 #include <cmath>
 #include <OpenGL/OpenGL.h>
-
+#include "headtracker.h"
 #include "util.h"
 
 typedef struct {
