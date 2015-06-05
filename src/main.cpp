@@ -87,7 +87,7 @@ Mat drawParallax(float zoom, Point2i headPosition){
  */
 Mat drawStats(const HeadTracker &ft, Mat &frame){
     Point2i detectedPosition = Point(ft.detectedPosition);
-    string duration_string = std::to_string(ft.zoom) + "fps";
+    string duration_string = std::to_string(ft.fps) + "fps";
     line(frame, detectedPosition-Point(5, 0), detectedPosition+Point(5, 0), Scalar(0,2550));
     line(frame, detectedPosition-Point(0, 5), detectedPosition+Point(0, 5), Scalar(0,2550));
     Mat result;
