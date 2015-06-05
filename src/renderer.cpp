@@ -1,9 +1,8 @@
 #include "renderer.h"
 
 
-
+Renderer r;
 int main(){
-    Renderer r;
     r.init();
     r.render();
     return 0;
@@ -15,6 +14,7 @@ void Renderer::init(){
     if (!glfwInit()) {
         exit(EXIT_FAILURE);
     }
+    
     window = glfwCreateWindow(640, 480, "Simple example", NULL, NULL);
     if (!window)
     {
@@ -24,20 +24,14 @@ void Renderer::init(){
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
     glfwSetKeyCallback(window, key_callback);
+
+
+    glfwSetCursorPosCallback(window, mouse_position_callback);
     float ratio;
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
     ratio = width / (float) height;
     glViewport(0, 0, width, height);
-
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(-ratio, ratio, -1.f, 1.f, 1.f, -1.f);
-    glMatrixMode(GL_MODELVIEW);
-
-    GLuint vertex_shader = make_shader(GL_VERTEX_SHADER, "data/vertex_shader.glsl");
-    GLuint fragment_shader = make_shader(GL_FRAGMENT_SHADER, "data/fragment_shader.glsl");
-    int program = make_program(vertex_shader, fragment_shader);
 
     if(!make_resources()){
         exit(EXIT_FAILURE);
@@ -54,30 +48,37 @@ void Renderer::render() {
 }
 
 void Renderer::draw(){
+
     glClearColor(0.3f, 0.3f, 0.3f, 0.3f);
     glClear(GL_COLOR_BUFFER_BIT);
     glUseProgram(g_resources.program);
+    glUniform1f(g_resources.uniforms.timer, g_resources.timer);
+    glUniform1f(g_resources.uniforms.mouse_x, g_resources.mouse_pos_x);
+    glUniform1f(g_resources.uniforms.mouse_y, g_resources.mouse_pos_y);
     glBindBuffer(GL_ARRAY_BUFFER, g_resources.vertex_buffer);
     glVertexAttribPointer(
                           g_resources.attributes.position,  /* attribute */
                           4,                                /* size */
                           GL_FLOAT,                         /* type */
                           GL_FALSE,                         /* normalized? */
-                          sizeof(GLfloat)*4,                /* stride */
+                          sizeof(GLfloat)*6,                /* stride */
                           (void*)0                          /* array buffer offset */
                           );
+    g_resources.timer = glfwGetTime();
     glEnableVertexAttribArray(g_resources.attributes.position);
-
+    /* Draw the cube */
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_resources.element_buffer);
-//    glLoadIdentity();
-//    glRotatef((float) glfwGetTime() * 50.f, 0.f, 0.f, 1.f);
-
     glDrawElements(
-                   GL_TRIANGLE_STRIP,  /* mode */
-                   4,                  /* count */
+                   GL_TRIANGLES,       /* mode */
+                   36,                  /* count */
                    GL_UNSIGNED_SHORT,  /* type */
                    (void*)0            /* element array buffer offset */
                    );
+
+    /* back wall */
+
+    glDrawElements(GL_TRIANGLE_STRIP, 2, GL_UNSIGNED_SHORT, (void*)10);
+
     glDisableVertexAttribArray(g_resources.attributes.position);
     glfwSwapBuffers(window);
     glfwPollEvents();
@@ -87,6 +88,14 @@ void Renderer::draw(){
 
 
 /* OpenGL Infrastructure */
+
+void Renderer::mouse_position_callback(GLFWwindow * window, double x, double y){
+    // Hack: We know the window size is 640*480
+    int xhalf = 640/2;
+    int yhalf = 480/2;
+    r.g_resources.mouse_pos_x = (x-xhalf)/xhalf; // position relative to window center
+    r.g_resources.mouse_pos_y = (y-yhalf)/yhalf; // position relative to window center
+}
 
 void Renderer::error_callback(int error, const char* description){
     fputs(description, stderr);
@@ -129,17 +138,19 @@ GLuint Renderer::make_shader(GLenum type, const char *filename){
 
 GLuint Renderer::make_program(GLuint vertex_shader, GLuint fragment_shader){
     GLint program_ok;
-
+    GLint attached_shaders;
     GLuint program = glCreateProgram();
     glAttachShader(program, vertex_shader);
     glAttachShader(program, fragment_shader);
     glLinkProgram(program);
 
     glGetProgramiv(program, GL_LINK_STATUS, &program_ok);
+    glGetProgramiv(program, GL_ATTACHED_SHADERS, &attached_shaders);
     if (!program_ok) {
-        fprintf(stderr, "Failed to link shader program:\n");
+        fprintf(stderr, "Failed to link shader program.\n");
         char glErrorLog[1024];
-        glGetShaderInfoLog(program, 1024, NULL, glErrorLog);
+        int length;
+        glGetShaderInfoLog(program, 1024, &length, glErrorLog);
         std::cout << glErrorLog << std::endl;
         glDeleteProgram(program);
         return 0;
@@ -152,24 +163,80 @@ GLuint Renderer::make_buffer(GLenum target, const void *buffer_data, GLsizei buf
     glGenBuffers(1, &buffer);
     glBindBuffer(target, buffer);
     glBufferData(target, buffer_size, buffer_data, GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     return buffer;
 }
 
+GLuint Renderer::make_texture(const char *filename){
+    GLuint texture;
+    int width, height;
+    void *pixels = read_tga(filename, &width, &height);
+
+    if (!pixels) {
+        return 0;
+    }
+
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     GL_CLAMP_TO_EDGE);
+    glTexImage2D(
+                 GL_TEXTURE_2D, 0,           /* target, level of detail */
+                 GL_RGB8,                    /* internal format */
+                 width, height, 0,           /* width, height, border */
+                 GL_BGR, GL_UNSIGNED_BYTE,   /* external format, type */
+                 pixels                      /* pixels */
+                 );
+    return texture;
+}
 
 int Renderer::make_resources(void){
     /* make buffers and textures ... */
     GLfloat vertices[] = {
-        -1.0f, -1.0f, 0.0f, 1.0f,
-        1.0f, -1.0f, 0.0f, 1.0f,
-        -1.0f,  1.0f, 0.0f, 1.0f,
-        1.0f,  1.0f, 0.0f, 1.0f
+        // front                   UV
+       -1.0, -1.0, 1.0, 1.0,      0.0, 0.0,
+        1.0, -1.0, 1.0, 1.0,      1.0, 0.0,
+        1.0,  1.0, 1.0, 1.0,      1.0, 1.0,
+       -1.0,  1.0, 1.0, 1.0,      0.0, 1.0,
+        // back
+       -1.0, -1.0, -1.0, 1.0,     0.0, 0.0,
+        1.0, -1.0, -1.0, 1.0,     1.0, 0.0,
+        1.0,  1.0, -1.0, 1.0,     1.0, 1.0,
+       -1.0,  1.0, -1.0, 1.0,     0.0, 1.0,
     };
 
-    GLushort indices[] = { 0,1,2,3 };
+    GLushort indices[] = {
+        // top
+        3, 2, 6,
+        6, 7, 3,
+        // back
+        7, 6, 5,
+        5, 4, 7,
+        // bottom
+        4, 5, 1,
+        1, 0, 4,
+        // left
+        4, 0, 3,
+        3, 7, 4,
+        // right
+        1, 5, 6,
+        6, 2, 1,
+        // front
+        0, 1, 2,
+        2, 3, 0,
+    };
 
+    g_resources.textures[0] = make_texture("data/hello1.tga");
+    g_resources.textures[1] = make_texture("data/hello2.tga");
+
+    if (g_resources.textures[0] == 0 || g_resources.textures[1] == 0){
+        printf("Error: could not init textures!");
+        return 0;
+    }
 
     g_resources.vertex_buffer = make_buffer(GL_ARRAY_BUFFER, vertices, sizeof(vertices));
-
     g_resources.element_buffer = make_buffer(GL_ELEMENT_ARRAY_BUFFER, indices, sizeof(indices));
 
     /* Shaders */
@@ -188,13 +255,11 @@ int Renderer::make_resources(void){
         return 0;
     }
 
-
-//    g_resources.uniforms.fade_factor
-//    = glGetUniformLocation(g_resources.program, "fade_factor");
-//    g_resources.uniforms.textures[0]
-//    = glGetUniformLocation(g_resources.program, "textures[0]");
-//    g_resources.uniforms.textures[1]
-//    = glGetUniformLocation(g_resources.program, "textures[1]");
+    g_resources.uniforms.timer = glGetUniformLocation(g_resources.program, "timer");
+    g_resources.uniforms.mouse_x = glGetUniformLocation(g_resources.program, "mouse_x");
+    g_resources.uniforms.mouse_y = glGetUniformLocation(g_resources.program, "mouse_y");
+    g_resources.uniforms.textures[0] = glGetUniformLocation(g_resources.program, "textures[0]");
+    g_resources.uniforms.textures[1] = glGetUniformLocation(g_resources.program, "textures[1]");
 //
     g_resources.attributes.position = glGetAttribLocation(g_resources.program, "position");
 

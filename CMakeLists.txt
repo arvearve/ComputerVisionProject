@@ -11,7 +11,7 @@ add_custom_command(TARGET headtracker POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_directory
                    ${CMAKE_SOURCE_DIR}/data $<TARGET_FILE_DIR:headtracker>/data)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-ADD_EXECUTABLE(renderer src/renderer.cpp)
+ADD_EXECUTABLE(renderer src/renderer.cpp src/util.cpp)
 FIND_PACKAGE(OpenGL REQUIRED)
 TARGET_LINK_LIBRARIES(renderer ${OPENGL_LIBRARIES})
 ADD_SUBDIRECTORy(lib/glfw)
