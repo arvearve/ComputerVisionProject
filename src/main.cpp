@@ -1,4 +1,4 @@
-//
+    //
 //  glmain.cpp
 //  project
 //
@@ -8,8 +8,16 @@
 
 #include "main.h"
 #include "headtracker.h"
+#include "sma.h"
 #include <thread>
+#include <iostream>
+#include <stddef.h>
+#include <assert.h>
 #define FLIP_HORIZONTAL 1
+
+using std::cout;
+using std::endl;
+
 
 Mat drawParallax(float zoom, const Point2i headPosition);
 Mat backgroundImage = imread("data/landscape.jpg");
@@ -34,6 +42,8 @@ int main(int argc, char** argv) {
     }
     return 0;
 }
+
+SMA zoom_list(10);
 
 /*
    Map from zoom value to scale value
@@ -67,10 +77,14 @@ Mat drawParallax(float zoom, Point2i headPosition){
 
     zoom = convert_values(zoom, 100, 300, 0.7, 1.6);
 
+    zoom_list.add(zoom);
+
+    zoom = zoom_list.avg();
+
     resize(backgroundImage, newBackgroundImage, Size(0, 0), zoom, zoom);
 
     float scaleFactor = 2.0;
-    headPosition.x = newBackgroundImage.cols/2 + headPosition.x*scaleFactor;
+    headPosition.x = newBackgroundImage.cols/2 + headPosition.x * scaleFactor;
     headPosition.y = newBackgroundImage.rows/2 - headPosition.y*scaleFactor;
     Point2i offsetX = Point2i(320, 0), offsetY = Point2i(0, 240);
     Point2i topLeft     = headPosition - offsetX - offsetY,
@@ -87,7 +101,7 @@ Mat drawParallax(float zoom, Point2i headPosition){
  */
 Mat drawStats(const HeadTracker &ft, Mat &frame){
     Point2i detectedPosition = Point(ft.detectedPosition);
-    string duration_string = std::to_string(ft.fps) + "fps";
+    string duration_string = std::to_string(ft.zoom) + "fps";
     line(frame, detectedPosition-Point(5, 0), detectedPosition+Point(5, 0), Scalar(0,2550));
     line(frame, detectedPosition-Point(0, 5), detectedPosition+Point(0, 5), Scalar(0,2550));
     Mat result;
